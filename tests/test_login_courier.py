@@ -1,25 +1,25 @@
 import pytest
-from utils import register_new_courier_and_return_login_password, login_courier, delete_courier
+from utils import login_courier
+
 
 class TestCourierLogin:
-    def setup_method(self):
-        self.courier_data = register_new_courier_and_return_login_password()
-        self.login = self.courier_data[0]
-        self.password = self.courier_data[1]
-        self.first_name = self.courier_data[2]
-
-    def teardown_method(self):
-        response = login_courier(self.login, self.password)
-        if response.status_code == 200:
-            courier_id = response.json()["id"]
-            delete_courier(courier_id)
-
-    def test_login_courier(self):
-        response = login_courier(self.login, self.password)
+    def test_login_courier(self, courier_data):
+        login, password, _ = courier_data
+        response = login_courier(login, password)
         assert response.status_code == 200
         assert "id" in response.json()
 
-    def test_login_courier_missing_fields(self):
-        response = login_courier("", self.password)
+    @pytest.mark.parametrize("login, password", [
+        ("", "password"),
+        ("login", "")
+    ])
+    def test_login_courier_missing_fields(self, login, password):
+        response = login_courier(login, password)
         assert response.status_code == 400
         assert response.json()["message"] == "Недостаточно данных для входа"
+
+    def test_login_courier_invalid_credentials(self):
+        response = login_courier("invalid_login", "invalid_password")
+        assert response.status_code == 404
+        assert response.json()["message"] == "Учетная запись не найдена"
+
